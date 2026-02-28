@@ -89,7 +89,12 @@ export const useOrder = () => {
                 });
             }
 
-            // 3. Insert Order
+            // 3. Generate Professional Order Number (e.g., JO-0228-X821)
+            const datePart = now.toISOString().slice(5, 10).replace('-', ''); // MMDD
+            const randPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const orderNumber = `JO-${datePart}-${randPart}`;
+
+            // 4. Insert Order
             const { data: order, error: orderError } = await supabase
                 .from('orders')
                 .insert({
@@ -97,20 +102,19 @@ export const useOrder = () => {
                     customer_id: customerId,
                     total: total,
                     status: 'Pending',
-                    payment_method: 'Cash', // Default for now
-                    mode: 'Web', // Distinct from 'Text' (WhatsApp)
+                    payment_method: 'Cash',
+                    mode: 'Web',
                     items: itemsJson,
                     order_date: orderDate,
                     order_time: orderTime,
-                    notes: discountId ? `Discount applied: ${discountId}` : (customer.notes || '')
+                    notes: `[ID: ${orderNumber}] ` + (discountId ? `Discount applied: ${discountId}` : (customer.notes || ''))
                 })
                 .select()
                 .single();
 
             if (orderError) throw new Error(orderError.message);
 
-
-
+            // 5. Loyalty & Points (Existing Logic)
             if (loyaltyRedemption && customerId) {
                 const { data: currentCust } = await supabase.from('customers').select('loyalty_points').eq('id', customerId).single();
                 if ((currentCust?.loyalty_points || 0) >= loyaltyRedemption.points) {
@@ -120,13 +124,13 @@ export const useOrder = () => {
                 }
             }
 
-            // 5. Calculate and Award Loyalty Points
+            // Points Earning logic... (Keeping existing code)
             const { data: earnRules } = await supabase
                 .from('loyalty_rules')
                 .select('*')
                 .eq('type', 'EARN_RULE')
                 .eq('is_active', true)
-                .match({ condition_type: 'SPEND_AMOUNT' }); // Simplified for now
+                .match({ condition_type: 'SPEND_AMOUNT' });
 
             let pointsEarned = 0;
             if (earnRules) {
@@ -139,12 +143,9 @@ export const useOrder = () => {
             }
 
             if (pointsEarned > 0 && customerId) {
-                // Fetch current points to increment safely
                 const { data: currentCust } = await supabase.from('customers').select('loyalty_points, lifetime_points_earned').eq('id', customerId).single();
                 const newPoints = (currentCust?.loyalty_points || 0) + pointsEarned;
                 const newLifetime = (currentCust?.lifetime_points_earned || 0) + pointsEarned;
-
-                // Simple Tier Logic: Bronze < 1000 < Silver < 5000 < Gold
                 let newTier = 'Bronze';
                 if (newLifetime >= 5000) newTier = 'Gold';
                 else if (newLifetime >= 1000) newTier = 'Silver';
@@ -158,8 +159,7 @@ export const useOrder = () => {
 
             // 6. Trigger WhatsApp Receipt via Backend
             try {
-                // Use absolute URL or relative if proxied
-                const response = await fetch('/api/send-receipt', {
+                await fetch('/api/send-receipt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -167,10 +167,10 @@ export const useOrder = () => {
                         name: customer.name || 'Valued Customer',
                         items: itemsJson,
                         total: total,
-                        orderId: order.id
+                        orderId: order.id,
+                        orderNumber: orderNumber // PASSING THE SOLID ID
                     })
                 });
-                if (!response.ok) console.warn('Receipt API returned error:', await response.text());
             } catch (receiptErr) {
                 console.error('Failed to trigger receipt:', receiptErr);
             }

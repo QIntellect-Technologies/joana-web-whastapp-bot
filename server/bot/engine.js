@@ -120,7 +120,16 @@ async function processMessage(from, text, name = 'Valued Customer') {
     }
 }
 
+function resetSession(from) {
+    if (sessions[from]) {
+        sessions[from].cart = [];
+        sessions[from].step = 'welcome';
+        console.log(`🧹 Session reset for ${from}`);
+    }
+}
+
 module.exports = {
     processMessage,
-    getSession
+    getSession,
+    resetSession
 };
