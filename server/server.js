@@ -79,7 +79,23 @@ app.post('/webhook', async (req, res) => {
             if (value.messages && Array.isArray(value.messages)) {
                 const message = value.messages[0];
                 const from = message.from;
+                const messageId = message.id;
                 let msgBody = '';
+
+                // Mark as Read (Blue Tick)
+                try {
+                    await axios.post(
+                        `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+                        {
+                            messaging_product: "whatsapp",
+                            status: "read",
+                            message_id: messageId
+                        },
+                        { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}` } }
+                    );
+                } catch (readErr) {
+                    console.error("❌ Failed to mark message as read:", readErr.message);
+                }
 
                 if (message.type === 'text') {
                     msgBody = message.text.body;
