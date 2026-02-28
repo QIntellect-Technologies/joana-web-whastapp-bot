@@ -1,0 +1,76 @@
+{
+  "Branches.xlsx": [
+    [
+      "sr no",
+      "branch name",
+      "address",
+      "phone number",
+      "icon"
+    ],
+    [
+      1,
+      "Al Malqa District",
+      "Al Dahmaa Street",
+      503100799,
+      "📞"
+    ],
+    [
+      2,
+      "Al Malqa District",
+      "Wadi Hajer Street",
+      560051207,
+      "📞"
+    ],
+    [
+      3,
+      "Al Shifa District",
+      "Prince Nasser Bin Saud Street",
+      559852700,
+      "📞"
+    ],
+    [
+      4,
+      "Al Shifa District",
+      "Muhammad Ibn Munqidh Street",
+      507300126,
+      "📞"
+    ]
+  ],
+  "Menu (9).xlsx": [
+    [
+      "category",
+      "name_en",
+      "name_ar",
+      "price",
+      "key\r\n"
+    ],
+    [
+      "Burgers",
+      "Chicken Burger",
+      "برجر دجاج",
+      9.5,
+      1
+    ],
+    [
+      "Burgers",
+      "Beef Burger",
+      "برجر لحم",
+      9.5,
+      2
+    ],
+    [
+      "Burgers",
+      "Regular Zinger Burger",
+      "برجر زنجر عادي",
+      13.5,
+      3
+    ],
+    [
+      "Burgers",
+      "Spicy Zinger Burger",
+      "برجر زنجر حار",
+      11.5,
+      4
+    ]
+  ]
+}

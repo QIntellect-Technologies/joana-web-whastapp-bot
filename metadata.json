@@ -1,0 +1,5 @@
+{
+  "name": "FOOD BOOT",
+  "description": "A scalable multi-branch restaurant management dashboard for managing menus, prices, and categories with role-based access.",
+  "requestFramePermissions": []
+}
