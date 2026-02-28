@@ -15,6 +15,14 @@ RUN npm install
 # Copy the rest
 COPY . .
 
+# Accept Railway build arguments
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
+# Expose them to the Vite build process
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 # Build both applications
 RUN npm run build
 
