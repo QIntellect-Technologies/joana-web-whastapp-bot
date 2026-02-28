@@ -6,13 +6,20 @@ const FormData = require('form-data');
 const dotenv = require('dotenv');
 const botEngine = require('./bot/engine');
 
+// Try to load .env from current dir AND from the script's dir for Docker compatibility
 dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'joana-verify-token-123';
+
+console.log('--- Server Startup ---');
+console.log('PORT:', PORT);
+console.log('VERIFY_TOKEN loaded:', VERIFY_TOKEN ? '✅ Yes' : '❌ No');
+console.log('----------------------');
 
 // GET /webhook - Verification for Meta
 app.get('/webhook', (req, res) => {
@@ -20,16 +27,25 @@ app.get('/webhook', (req, res) => {
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
+    console.log('--- Webhook Verification Request ---');
+    console.log('Mode:', mode);
+    console.log('Token received:', token);
+    console.log('Expected Token:', VERIFY_TOKEN);
+
     if (mode && token) {
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {
             console.log('✅ WEBHOOK_VERIFIED');
             res.status(200).send(challenge);
         } else {
-            console.error('❌ VERIFICATION_FAILED');
-            res.sendStatus(403);
+            console.error('❌ VERIFICATION_FAILED - Token Mismatch');
+            res.status(403).send('Verification failed: Token mismatch');
         }
+    } else {
+        console.error('❌ VERIFICATION_FAILED - Missing parameters');
+        res.status(400).send('Verification failed: Missing parameters');
     }
 });
+
 
 // POST /webhook - WhatsApp webhook with backend bot engine integration
 app.post('/webhook', async (req, res) => {
