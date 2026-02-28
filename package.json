@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": ">=22.14.0"
+    "node": ">=20.19.1"
   },
   "scripts": {
     "dev": "vite",
     "build": "npm run build:public && npm run build:admin",
-    "build:public": "cd public-menu && npm install --include=optional && npm run build",
+    "build:public": "npm install --prefix public-menu --include=optional && npm run build --prefix public-menu",
     "build:admin": "vite build",
     "start": "node server/server.js",
     "preview": "vite preview"
