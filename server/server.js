@@ -189,7 +189,7 @@ app.post('/webhook', async (req, res) => {
             const replies = await botEngine.processMessage(from, msgBody);
 
             for (const reply of replies) {
-                const url = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+                const url = `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
                 try {
                     let payload;
                     if (reply && typeof reply === 'object' && reply.type === 'button') {
