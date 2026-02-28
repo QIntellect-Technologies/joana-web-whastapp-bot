@@ -58,201 +58,217 @@ app.post('/webhook', async (req, res) => {
             Array.isArray(body.entry) &&
             body.entry[0].changes &&
             Array.isArray(body.entry[0].changes) &&
-            body.entry[0].changes[0].value &&
-            body.entry[0].changes[0].value.messages &&
-            Array.isArray(body.entry[0].changes[0].value.messages)
+            body.entry[0].changes[0].value
         ) {
-            const message = body.entry[0].changes[0].value.messages[0];
-            const from = message.from;
-            let msgBody = '';
+            const value = body.entry[0].changes[0].value;
 
-            if (message.type === 'text') {
-                msgBody = message.text.body;
-            } else if (message.type === 'interactive' && message.interactive.button_reply) {
-                msgBody = message.interactive.button_reply.id;
-            } else if (message.type === 'audio') {
-                console.log("🎤 Audio message received. ID:", message.audio.id);
+            // Handle Asynchronous Delivery Statuses (Failures)
+            if (value.statuses && Array.isArray(value.statuses)) {
+                const status = value.statuses[0];
+                if (status.status === 'failed') {
+                    console.error('⚠️ WHATSAPP DELIVERY FAILED asynchronously!');
+                    console.error('Recipient:', status.recipient_id);
+                    console.error('Error Details:', JSON.stringify(status.errors));
+                } else {
+                    console.log(`✔️ Message status update: ${status.status} for ${status.recipient_id}`);
+                }
+                return res.sendStatus(200);
+            }
 
-                // 1. TRY REAL TRANSCRIPTION
-                try {
-                    const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
-                    const isGroq = !!process.env.GROQ_API_KEY;
+            // Process Incoming Messages
+            if (value.messages && Array.isArray(value.messages)) {
+                const message = value.messages[0];
+                const from = message.from;
+                let msgBody = '';
 
-                    if (apiKey) {
-                        console.log(`🎤 Fetching WhatsApp media metadata for ID: ${message.audio.id}...`);
-                        // Fetch Media URL from WhatsApp
-                        const mediaResponse = await axios.get(
-                            `https://graph.facebook.com/v18.0/${message.audio.id}`,
-                            { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}` } }
-                        );
+                if (message.type === 'text') {
+                    msgBody = message.text.body;
+                } else if (message.type === 'interactive' && message.interactive.button_reply) {
+                    msgBody = message.interactive.button_reply.id;
+                } else if (message.type === 'audio') {
+                    console.log("🎤 Audio message received. ID:", message.audio.id);
 
-                        const mediaUrl = mediaResponse.data.url;
-                        console.log("📥 Downloading audio binary from WhatsApp...");
-
-                        // Download Audio Binary
-                        const audioData = await axios.get(mediaUrl, {
-                            headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}` },
-                            responseType: 'arraybuffer'
-                        });
-
-                        console.log(`✅ Downloaded ${audioData.data.byteLength} bytes. Transcribing via ${isGroq ? 'Groq' : 'OpenAI'}...`);
-
-                        // Create FormData for Whisper API
-                        const form = new FormData();
-                        form.append('file', Buffer.from(audioData.data), { filename: 'audio.ogg', contentType: 'audio/ogg' });
-
-                        const model = isGroq ? 'whisper-large-v3' : 'whisper-1';
-                        form.append('model', model);
-
-                        // Guidance prompt based on current user language
-                        const session = botEngine.getSession(from);
-                        const userLang = session ? (session.language || 'en') : 'en';
-                        const prompt = userLang === 'en'
-                            ? "Transcribe in English."
-                            : "Transcribe in Arabic.";
-                        form.append('prompt', prompt);
-
-                        const transcribeUrl = isGroq
-                            ? 'https://api.groq.com/openai/v1/audio/transcriptions'
-                            : 'https://api.openai.com/v1/audio/transcriptions';
-
-                        console.log(`🤖 Sending to ${isGroq ? 'Groq' : 'OpenAI'} API...`);
-                        const response = await axios.post(transcribeUrl, form, {
-                            headers: {
-                                ...form.getHeaders(),
-                                'Authorization': `Bearer ${apiKey.trim()}`
-                            }
-                        });
-
-                        msgBody = (response.data.text || "").trim();
-                        console.log("Real Transcription:", msgBody);
-
-                        // GUARD: Check for empty results
-                        if (!msgBody) {
-                            throw new Error("Whisper returned empty transcription");
-                        }
-
-                        // GUARD: Check for unsupported scripts
-                        const allowedPattern = /[a-zA-Z0-9\u0600-\u06FF\s.,!?;:'"-]/g;
-                        const cleaned = msgBody.replace(allowedPattern, "");
-                        if (cleaned.length > msgBody.length * 0.2 && msgBody.length > 5) {
-                            console.log("⚠️ REJECTED: Unsupported language detected:", msgBody);
-                            throw new Error("Unsupported language detected. Please speak English or Arabic.");
-                        }
-
-                        // GUARD: Hallucinated repetitions
-                        if (msgBody.length > 30) {
-                            const words = msgBody.split(/\s+/);
-                            if (words.length > 10) {
-                                const wordCounts = {};
-                                words.forEach(w => wordCounts[w] = (wordCounts[w] || 0) + 1);
-                                const mostCommonWord = Object.keys(wordCounts).reduce((a, b) => wordCounts[a] > wordCounts[b] ? a : b);
-                                if (wordCounts[mostCommonWord] > words.length * 0.5) {
-                                    console.log("⚠️ REJECTED: Repetitive hallucination:", msgBody);
-                                    throw new Error("Voice unclear (repetitive hallucination)");
-                                }
-                            }
-                        }
-
-                        // Feedback for Real Transcription
-                        const feedbackUrl = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
-                        await axios.post(feedbackUrl, {
-                            messaging_product: 'whatsapp',
-                            to: from,
-                            text: { body: `🎤 You said: "${msgBody}"` }
-                        }, { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } });
-
-                    } else {
-                        throw new Error("API Key (Groq/OpenAI) missing for transcription.");
-                    }
-                } catch (error) {
-                    console.error("Transcription failed:", error.message);
-                    const errorMsg = error.message.includes("Unsupported language") || error.message.includes("Voice unclear")
-                        ? `⚠️ ${error.message}`
-                        : "⚠️ Sorry, I couldn't understand your voice message. Please try speaking more clearly or type your order.";
-
+                    // 1. TRY REAL TRANSCRIPTION
                     try {
-                        const feedbackUrl = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
-                        await axios.post(feedbackUrl, {
-                            messaging_product: 'whatsapp',
-                            to: from,
-                            text: { body: errorMsg }
-                        }, { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } });
-                    } catch (sendErr) {
-                        console.error("Failed to send error feedback:", sendErr.message);
-                    }
-                    return res.sendStatus(200);
-                }
-            }
+                        const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+                        const isGroq = !!process.env.GROQ_API_KEY;
 
-            // Use backend bot engine to process message
-            const replies = await botEngine.processMessage(from, msgBody);
+                        if (apiKey) {
+                            console.log(`🎤 Fetching WhatsApp media metadata for ID: ${message.audio.id}...`);
+                            // Fetch Media URL from WhatsApp
+                            const mediaResponse = await axios.get(
+                                `https://graph.facebook.com/v18.0/${message.audio.id}`,
+                                { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}` } }
+                            );
 
-            for (const reply of replies) {
-                const url = `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
-                try {
-                    let payload;
-                    if (reply && typeof reply === 'object' && reply.type === 'button') {
-                        payload = {
-                            messaging_product: 'whatsapp',
-                            to: from,
-                            type: 'interactive',
-                            interactive: {
-                                type: 'button',
-                                body: { text: reply.body },
-                                action: {
-                                    buttons: reply.buttons.slice(0, 3).map((btn, idx) => ({
-                                        type: 'reply',
-                                        reply: {
-                                            id: btn.id || `btn_${idx + 1}`,
-                                            title: btn.title
-                                        }
-                                    }))
+                            const mediaUrl = mediaResponse.data.url;
+                            console.log("📥 Downloading audio binary from WhatsApp...");
+
+                            // Download Audio Binary
+                            const audioData = await axios.get(mediaUrl, {
+                                headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}` },
+                                responseType: 'arraybuffer'
+                            });
+
+                            console.log(`✅ Downloaded ${audioData.data.byteLength} bytes. Transcribing via ${isGroq ? 'Groq' : 'OpenAI'}...`);
+
+                            // Create FormData for Whisper API
+                            const form = new FormData();
+                            form.append('file', Buffer.from(audioData.data), { filename: 'audio.ogg', contentType: 'audio/ogg' });
+
+                            const model = isGroq ? 'whisper-large-v3' : 'whisper-1';
+                            form.append('model', model);
+
+                            // Guidance prompt based on current user language
+                            const session = botEngine.getSession(from);
+                            const userLang = session ? (session.language || 'en') : 'en';
+                            const prompt = userLang === 'en'
+                                ? "Transcribe in English."
+                                : "Transcribe in Arabic.";
+                            form.append('prompt', prompt);
+
+                            const transcribeUrl = isGroq
+                                ? 'https://api.groq.com/openai/v1/audio/transcriptions'
+                                : 'https://api.openai.com/v1/audio/transcriptions';
+
+                            console.log(`🤖 Sending to ${isGroq ? 'Groq' : 'OpenAI'} API...`);
+                            const response = await axios.post(transcribeUrl, form, {
+                                headers: {
+                                    ...form.getHeaders(),
+                                    'Authorization': `Bearer ${apiKey.trim()}`
+                                }
+                            });
+
+                            msgBody = (response.data.text || "").trim();
+                            console.log("Real Transcription:", msgBody);
+
+                            // GUARD: Check for empty results
+                            if (!msgBody) {
+                                throw new Error("Whisper returned empty transcription");
+                            }
+
+                            // GUARD: Check for unsupported scripts
+                            const allowedPattern = /[a-zA-Z0-9\u0600-\u06FF\s.,!?;:'"-]/g;
+                            const cleaned = msgBody.replace(allowedPattern, "");
+                            if (cleaned.length > msgBody.length * 0.2 && msgBody.length > 5) {
+                                console.log("⚠️ REJECTED: Unsupported language detected:", msgBody);
+                                throw new Error("Unsupported language detected. Please speak English or Arabic.");
+                            }
+
+                            // GUARD: Hallucinated repetitions
+                            if (msgBody.length > 30) {
+                                const words = msgBody.split(/\s+/);
+                                if (words.length > 10) {
+                                    const wordCounts = {};
+                                    words.forEach(w => wordCounts[w] = (wordCounts[w] || 0) + 1);
+                                    const mostCommonWord = Object.keys(wordCounts).reduce((a, b) => wordCounts[a] > wordCounts[b] ? a : b);
+                                    if (wordCounts[mostCommonWord] > words.length * 0.5) {
+                                        console.log("⚠️ REJECTED: Repetitive hallucination:", msgBody);
+                                        throw new Error("Voice unclear (repetitive hallucination)");
+                                    }
                                 }
                             }
-                        };
-                    } else if (reply && typeof reply === 'object' && reply.type === 'image') {
-                        payload = {
-                            messaging_product: 'whatsapp',
-                            to: from,
-                            type: 'image',
-                            image: {
-                                link: reply.link
-                            }
-                        };
-                    } else {
-                        payload = {
-                            messaging_product: 'whatsapp',
-                            to: from,
-                            text: { body: reply }
-                        };
-                    }
-                    await axios.post(
-                        url,
-                        payload,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-                                'Content-Type': 'application/json'
-                            }
-                        }
-                    );
-                    await new Promise(resolve => setTimeout(resolve, 800));
-                } catch (error) {
-                    const errorDetails = error.response ? JSON.stringify(error.response.data) : error.message;
-                    console.error('❌ Error sending WhatsApp reply!');
-                    console.error('👉 Target URL:', url.replace(WHATSAPP_ACCESS_TOKEN, '***'));
-                    console.error('👉 Error Details:', errorDetails);
 
-                    if (errorDetails.includes('Object with ID') && errorDetails.includes('does not exist')) {
-                        console.error('🎯 ACTION REQUIRED: Your WHATSAPP_PHONE_NUMBER_ID looks incorrect. Please verify it in Meta Dashboard.');
+                            // Feedback for Real Transcription
+                            const feedbackUrl = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+                            await axios.post(feedbackUrl, {
+                                messaging_product: 'whatsapp',
+                                to: from,
+                                text: { body: `🎤 You said: "${msgBody}"` }
+                            }, { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } });
+
+                        } else {
+                            throw new Error("API Key (Groq/OpenAI) missing for transcription.");
+                        }
+                    } catch (error) {
+                        console.error("Transcription failed:", error.message);
+                        const errorMsg = error.message.includes("Unsupported language") || error.message.includes("Voice unclear")
+                            ? `⚠️ ${error.message}`
+                            : "⚠️ Sorry, I couldn't understand your voice message. Please try speaking more clearly or type your order.";
+
+                        try {
+                            const feedbackUrl = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+                            await axios.post(feedbackUrl, {
+                                messaging_product: 'whatsapp',
+                                to: from,
+                                text: { body: errorMsg }
+                            }, { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } });
+                        } catch (sendErr) {
+                            console.error("Failed to send error feedback:", sendErr.message);
+                        }
+                        return res.sendStatus(200);
                     }
                 }
-            }
+
+                // Use backend bot engine to process message
+                const replies = await botEngine.processMessage(from, msgBody);
+
+                for (const reply of replies) {
+                    const url = `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+                    try {
+                        let payload;
+                        if (reply && typeof reply === 'object' && reply.type === 'button') {
+                            payload = {
+                                messaging_product: 'whatsapp',
+                                to: from,
+                                type: 'interactive',
+                                interactive: {
+                                    type: 'button',
+                                    body: { text: reply.body },
+                                    action: {
+                                        buttons: reply.buttons.slice(0, 3).map((btn, idx) => ({
+                                            type: 'reply',
+                                            reply: {
+                                                id: btn.id || `btn_${idx + 1}`,
+                                                title: btn.title
+                                            }
+                                        }))
+                                    }
+                                }
+                            };
+                        } else if (reply && typeof reply === 'object' && reply.type === 'image') {
+                            payload = {
+                                messaging_product: 'whatsapp',
+                                to: from,
+                                type: 'image',
+                                image: {
+                                    link: reply.link
+                                }
+                            };
+                        } else {
+                            payload = {
+                                messaging_product: 'whatsapp',
+                                to: from,
+                                text: { body: reply }
+                            };
+                        }
+                        await axios.post(
+                            url,
+                            payload,
+                            {
+                                headers: {
+                                    'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            }
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                    } catch (error) {
+                        const errorDetails = error.response ? JSON.stringify(error.response.data) : error.message;
+                        console.error('❌ Error sending WhatsApp reply!');
+                        console.error('👉 Target URL:', url.replace(WHATSAPP_ACCESS_TOKEN, '***'));
+                        console.error('👉 Error Details:', errorDetails);
+
+                    } // End try-catch
+                } // End for-loop
+            } // End if (value.messages)
+
+            res.sendStatus(200); // Acknowledge the webhook event
+        } else {
+            res.sendStatus(404); // Unknown structure within valid object
         }
-        res.sendStatus(200);
     } else {
-        res.sendStatus(404);
+        res.sendStatus(404); // Not a WhatsApp API event
     }
 });
 
