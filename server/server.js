@@ -281,15 +281,26 @@ app.post('/webhook', async (req, res) => {
 
 // Order Receipt API (Web Frontend calls this)
 app.post('/api/send-receipt', async (req, res) => {
-    const { phone, name, items, total, orderId, orderNumber } = req.body;
+    const { phone, name, items, total, orderId, orderNumber, subtotal, discount, deliveryFee } = req.body;
     if (!phone || !items || !total) return res.status(400).send('Missing order data');
 
     const formattedItems = items.map(i => `• ${i.qty}x ${i.name} (SAR ${i.price})`).join('\n');
     const displayId = orderNumber || orderId?.slice(0, 8) || 'WEB';
-    const cleanTotal = Number(total).toFixed(2);
-    const receiptText = `✅ *ORDER CONFIRMED!* 🍔\n\nThank you, *${name}*! Your order has been received.\n\n📝 *Order details:* #${displayId}\n${formattedItems}\n\n💰 *Total:* SAR ${cleanTotal}\n\n🕒 Your order will be ready in approximately *15 minutes*.\n\nSee you soon at JOANA! 🍴`;
 
-    // Reset WhatsApp session so the next "Hi" starts fresh
+    // Breakdown Formatting
+    const sTotal = Number(subtotal || total - (deliveryFee || 0)).toFixed(2);
+    const dFee = Number(deliveryFee || 0).toFixed(2);
+    const disc = Number(discount || 0).toFixed(2);
+    const fTotal = Number(total).toFixed(2);
+
+    let receiptText = `✅ *ORDER CONFIRMED!* 🍔\n\nThank you, *${name}*! Your order has been received.\n\n📝 *Order details:* #${displayId}\n${formattedItems}\n\n`;
+    receiptText += `▫️ *Subtotal:* SAR ${sTotal}\n`;
+    if (Number(disc) > 0) receiptText += `🎁 *Discount:* -SAR ${disc}\n`;
+    receiptText += `🚚 *Delivery Fee:* SAR ${dFee}\n`;
+    receiptText += `💰 *Total Amount:* *SAR ${fTotal}*\n\n`;
+    receiptText += `🕒 Your order will be ready in approximately *15 minutes*.\n\nSee you soon at JOANA! 🍴`;
+
+    // Reset WhatsApp session...
     botEngine.resetSession(phone);
 
     const url = `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;

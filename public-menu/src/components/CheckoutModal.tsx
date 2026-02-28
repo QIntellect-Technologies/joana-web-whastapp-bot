@@ -8,7 +8,7 @@ import Confetti from 'react-confetti';
 interface CheckoutModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (details: { name: string; phone: string; notes: string }, discountId?: string, finalTotal?: number) => Promise<{ success: boolean; orderId?: string; customerId?: string }>;
+    onSubmit: (details: { name: string; phone: string; notes: string }, discountId?: string, finalTotal?: number, breakdown?: { subtotal: number; discount: number; deliveryFee: number }) => Promise<{ success: boolean; orderId?: string; customerId?: string }>;
     totalAmount: number;
     branchId?: string;
     cartItems: any[];
@@ -137,9 +137,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSubmit
         e.preventDefault();
         if (!name || !phone) return;
 
-        setStatus('submitting');
+        const subtotal = totalAmount - 15; // totalAmount in props includes the 15 SAR delivery fee
+        const discount = totalAmount - discountedTotal;
+        const deliveryFee = 15;
+
         // Pass the applied discount ID and the final amount to the submission handler
-        const result = await onSubmit({ name, phone, notes }, activeDiscount?.id, discountedTotal);
+        const result = await onSubmit({ name, phone, notes }, activeDiscount?.id, discountedTotal, { subtotal, discount, deliveryFee });
 
         if (result.success) {
             setOrderId(result.orderId || null);

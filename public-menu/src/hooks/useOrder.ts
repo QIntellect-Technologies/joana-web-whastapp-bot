@@ -24,7 +24,8 @@ export const useOrder = () => {
         customer: CustomerDetails,
         discountId?: string,
         finalTotal?: number,
-        loyaltyRedemption?: { points: number; ruleId: string }
+        loyaltyRedemption?: { points: number; ruleId: string },
+        breakdown?: { subtotal: number; discount: number; deliveryFee: number }
     ): Promise<OrderResult> => {
         setIsSubmitting(true);
         try {
@@ -168,7 +169,10 @@ export const useOrder = () => {
                         items: itemsJson,
                         total: total,
                         orderId: order.id,
-                        orderNumber: orderNumber // PASSING THE SOLID ID
+                        orderNumber: orderNumber,
+                        subtotal: breakdown?.subtotal,
+                        discount: breakdown?.discount,
+                        deliveryFee: breakdown?.deliveryFee
                     })
                 });
             } catch (receiptErr) {
