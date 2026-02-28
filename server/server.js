@@ -276,6 +276,12 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
+// Serve Dynamic Configuration for Frontend
+app.get('/config.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.send(`window.ENV = { VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}", VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}" };`);
+});
+
 // Serve Static Files
 const publicMenuDist = path.join(__dirname, '../public-menu/dist');
 const adminPanelDist = path.join(__dirname, '../dist');
