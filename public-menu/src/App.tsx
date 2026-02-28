@@ -349,7 +349,7 @@ const App: React.FC = () => {
         calculateApplicableDiscounts={calculateApplicableDiscounts}
         onSubmit={async (details, discountId, finalTotal, breakdown) => {
           if (!branch?.id) return { success: false };
-          const result = await submitOrder(branch.id, cart, details, discountId, finalTotal, undefined, breakdown);
+          const result = await submitOrder(branch.id, cart, details, discountId, finalTotal, undefined, breakdown, branch.name);
           if (result.success) {
             // Save identity for tracking
             localStorage.setItem('foodboot_user', JSON.stringify({
