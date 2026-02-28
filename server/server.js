@@ -200,8 +200,11 @@ app.post('/webhook', async (req, res) => {
                     }
                 }
 
+                // Extract sender name for personalization
+                const name = value.contacts && value.contacts[0] ? value.contacts[0].profile.name : 'Valued Customer';
+
                 // Use backend bot engine to process message
-                const replies = await botEngine.processMessage(from, msgBody);
+                const replies = await botEngine.processMessage(from, msgBody, name);
 
                 for (const reply of replies) {
                     const url = `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
@@ -276,7 +279,47 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// Serve Dynamic Configuration for Frontend
+// Order Receipt API (Web Frontend calls this)
+app.post('/api/send-receipt', async (req, res) => {
+    const { phone, name, items, total, orderId } = req.body;
+    if (!phone || !items || !total) return res.status(400).send('Missing order data');
+
+    const formattedItems = items.map(i => `• ${i.qty}x ${i.name} (SAR ${i.price})`).join('\n');
+    const receiptText = `✅ *ORDER CONFIRMED!* 🍔\n\nThank you, *${name}*! Your order has been received.\n\n📝 *Order details:* #${orderId || 'WEB'}\n${formattedItems}\n\n💰 *Total:* SAR ${total}\n\n🕒 Your order will be ready in approximately *15 minutes*.\n\nSee you soon at JOANA! 🍴`;
+
+    const url = `https://graph.facebook.com/v22.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+    try {
+        await axios.post(url, {
+            messaging_product: 'whatsapp',
+            to: phone,
+            type: 'text',
+            text: { body: receiptText }
+        }, { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } });
+
+        console.log(`✅ Receipt sent to ${phone}`);
+
+        // Schedule feedback message (1 minute later)
+        setTimeout(async () => {
+            try {
+                const feedbackText = `Hi ${name}! We hope you enjoyed your meal. 😊\n\nWhich item did you like the most? We value your feedback! 🍔🍟`;
+                await axios.post(url, {
+                    messaging_product: 'whatsapp',
+                    to: phone,
+                    type: 'text',
+                    text: { body: feedbackText }
+                }, { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } });
+                console.log(`✅ Feedback message sent to ${phone}`);
+            } catch (err) {
+                console.error('❌ Delayed feedback failed:', err.message);
+            }
+        }, 60000);
+
+        res.status(200).send('Receipt queued');
+    } catch (error) {
+        console.error('❌ Error sending receipt:', error.response ? error.response.data : error.message);
+        res.status(500).send('WhatsApp delivery failed');
+    }
+});
 app.get('/config.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript');
     res.send(`window.ENV = { VITE_SUPABASE_URL: "${process.env.VITE_SUPABASE_URL || ''}", VITE_SUPABASE_ANON_KEY: "${process.env.VITE_SUPABASE_ANON_KEY || ''}" };`);

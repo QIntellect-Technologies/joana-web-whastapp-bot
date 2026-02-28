@@ -169,7 +169,7 @@ export interface Branch {
   ownerUsername?: string;
   ownerPassword?: string;
 
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'Closed' | 'Maintenance';
   menu: MenuItem[];
   settings: BranchSettings;
   staff: StaffMember[]; // New field

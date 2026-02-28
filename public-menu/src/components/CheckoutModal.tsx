@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, Loader2, Phone, User, FileText, Ticket, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -11,12 +11,13 @@ interface CheckoutModalProps {
     onSubmit: (details: { name: string; phone: string; notes: string }, discountId?: string, finalTotal?: number) => Promise<{ success: boolean; orderId?: string; customerId?: string }>;
     totalAmount: number;
     branchId?: string;
+    cartItems: any[];
     calculatePoints?: (amount: number) => number;
     getCustomerPoints?: (phone: string) => Promise<{ loyalty_points: number; loyalty_tier: string }>;
     calculateApplicableDiscounts?: (total: number) => { type: string; value: number; name: string } | null;
 }
 
-const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSubmit, totalAmount, branchId, calculatePoints, getCustomerPoints, calculateApplicableDiscounts }) => {
+const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSubmit, totalAmount, branchId, cartItems, calculatePoints, getCustomerPoints, calculateApplicableDiscounts }) => {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [notes, setNotes] = useState('');
@@ -42,6 +43,34 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSubmit
     const [comment, setComment] = useState('');
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
     const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+    // 1. Pre-fill from WhatsApp URL Parameters
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const waName = params.get('wa_name');
+        const waPhone = params.get('wa_phone');
+        if (waName) setName(waName);
+        if (waPhone) setPhone(waPhone.replace('+', ''));
+
+        // Load cart items for summary (Assuming they are in localStorage or passed via props would be better, 
+        // but for now we can peek at the internal state if possible or just assume the parent manages it.
+        // Since we don't have cart items in props, let's add them to props if needed, 
+        // but wait - the submitOrder in App.tsx has access to the cart. 
+        // Let's modify the component to accept cart items for the summary display.)
+    }, []);
+
+    // 2. Automated Redirect to WhatsApp on Success
+    useEffect(() => {
+        if (status === 'success') {
+            const timer = setTimeout(() => {
+                // Redirect back to WhatsApp. 
+                // We'll use the generic whatsapp:// protocol for better mobile app support
+                window.location.href = 'whatsapp://send?phone=960113110527149';
+                // Note: Using the ID if phone number isn't known, but 15 digits is standard
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [status]);
 
     const validateCoupon = async () => {
         if (!couponCode) return;
@@ -334,6 +363,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSubmit
                                                 placeholder="Special requests?"
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 font-medium focus:outline-none focus:border-primary transition-all resize-none"
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5 pt-2 border-t border-slate-50">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Order Summary</label>
+                                        <div className="bg-slate-50/50 rounded-xl border border-slate-100 p-3 space-y-2 max-h-32 overflow-y-auto">
+                                            {cartItems.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between items-center text-xs">
+                                                    <span className="font-medium text-slate-700">{item.quantity}x {item.name_en}</span>
+                                                    <span className="font-bold text-slate-500">SAR {(item.price * item.quantity).toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                            {cartItems.length === 0 && <p className="text-[10px] text-slate-400 italic">No items selected.</p>}
                                         </div>
                                     </div>
 

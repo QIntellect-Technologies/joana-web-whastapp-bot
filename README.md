@@ -8,6 +8,14 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/12id7062XiTGGJyccPF-_ExY4zlWYDw4I
 
+## ⚙️ Meta Developer Portal Configuration
+
+To activate your WhatsApp Bot, follow these final steps in your [Meta Developer Portal](https://developers.facebook.com/):
+
+1.  **Callback URL**: `https://joana-web-whastapp-bot-production.up.railway.app/webhook`
+2.  **Verify Token**: `joana-verify-token-123`
+3.  **Webhook Fields**: In the "WhatsApp" configuration, click **Manage** and subscribe to **`messages`**.
+
 ## Run Locally
 
 **Prerequisites:**  Node.js

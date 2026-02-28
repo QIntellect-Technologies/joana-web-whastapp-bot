@@ -156,6 +156,25 @@ export const useOrder = () => {
                 }).eq('id', customerId);
             }
 
+            // 6. Trigger WhatsApp Receipt via Backend
+            try {
+                // Use absolute URL or relative if proxied
+                const response = await fetch('/api/send-receipt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: phoneStr,
+                        name: customer.name || 'Valued Customer',
+                        items: itemsJson,
+                        total: total,
+                        orderId: order.id
+                    })
+                });
+                if (!response.ok) console.warn('Receipt API returned error:', await response.text());
+            } catch (receiptErr) {
+                console.error('Failed to trigger receipt:', receiptErr);
+            }
+
             return { success: true, orderId: order.id, customerId: customerId || undefined };
 
         } catch (error: any) {

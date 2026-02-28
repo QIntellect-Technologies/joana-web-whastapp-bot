@@ -49,6 +49,10 @@ const App: React.FC = () => {
   const [activeCategoryId, setActiveCategoryId] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
+  const total = useMemo(() => {
+    const subtotal = cart.reduce((sum, i) => sum + (i.discounted_price || i.price) * i.quantity, 0);
+    return subtotal > 0 ? subtotal + 15 : 0; // 15 SAR delivery fee
+  }, [cart]);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false); // NEW
   const [isTrackerOpen, setTrackerOpen] = useState(false); // NEW
@@ -338,7 +342,8 @@ const App: React.FC = () => {
         isOpen={isCheckoutOpen}
         onClose={() => setCheckoutOpen(false)}
         branchId={branch?.id}
-        totalAmount={cart.reduce((sum, i) => sum + (i.discounted_price || i.price) * i.quantity, 0) + (cart.length > 0 ? 15 : 0)}
+        totalAmount={total}
+        cartItems={cart}
         calculatePoints={calculatePotentialPoints}
         getCustomerPoints={getCustomerPoints}
         calculateApplicableDiscounts={calculateApplicableDiscounts}

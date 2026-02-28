@@ -338,7 +338,7 @@ const BranchManager: React.FC<BranchManagerProps> = ({
     const [newStaffForm, setNewStaffForm] = useState<Partial<StaffMember>>({
         role: StaffRole.CASHIER,
         status: 'Active',
-        shift: { start: '09:00', end: '17:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
+        shift: { start: '09:00', end: '17:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], type: 'Morning' },
         financials: { salary: 3000, paidThisMonth: 0, pendingAmount: 0, bonuses: 0, penalties: 0 } as any
     });
 
@@ -419,7 +419,7 @@ const BranchManager: React.FC<BranchManagerProps> = ({
         setNewStaffForm({
             role: StaffRole.CASHIER,
             status: 'Active',
-            shift: { start: '09:00', end: '17:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] },
+            shift: { start: '09:00', end: '17:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], type: 'Morning' },
             financials: { salary: 3000, paidThisMonth: 0, pendingAmount: 0, bonuses: 0, penalties: 0 } as any
         });
     };
@@ -2329,7 +2329,7 @@ const BranchManager: React.FC<BranchManagerProps> = ({
                                             </p>
                                         </div>
                                         <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-                                            {['Active', 'Closed', 'Maintenance'].map((stats) => (
+                                            {(['Active', 'Closed', 'Maintenance'] as const).map((stats) => (
                                                 <button
                                                     key={stats}
                                                     onClick={async () => {
