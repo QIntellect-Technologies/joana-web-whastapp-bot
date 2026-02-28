@@ -10,7 +10,10 @@
     "public-menu"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=public-menu",
+    "dev": "concurrently \"npm run dev:admin\" \"npm run dev:public\" \"npm run dev:server\"",
+    "dev:admin": "vite",
+    "dev:public": "npm run dev --workspace=public-menu",
+    "dev:server": "node server/server.js",
     "build": "npm run build --workspaces && vite build",
     "start": "node server/server.js"
   },
@@ -32,6 +35,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
