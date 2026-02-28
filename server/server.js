@@ -231,13 +231,25 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// Catch-all to serve index.html for unknown routes (SPA support)
+// Serve Static Files
+const publicMenuDist = path.join(__dirname, '../public-menu/dist');
+const adminPanelDist = path.join(__dirname, '../dist');
+
+// 1. Serve Admin Panel at /admin
+app.use('/admin', express.static(adminPanelDist));
+app.get('/admin/*', (req, res) => {
+    res.sendFile(path.join(adminPanelDist, 'index.html'));
+});
+
+// 2. Serve Public Menu at /
+app.use(express.static(publicMenuDist));
+
+// 3. Catch-all to serve public menu index.html (SPA support)
 app.use((req, res) => {
-    const indexPath = path.join(__dirname, '../public-menu/dist/index.html');
-    if (require('fs').existsSync(indexPath)) {
-        res.sendFile(indexPath);
+    if (require('fs').existsSync(path.join(publicMenuDist, 'index.html'))) {
+        res.sendFile(path.join(publicMenuDist, 'index.html'));
     } else {
-        res.status(404).send('Frontend not built yet. Run build first.');
+        res.status(404).send('Frontend not built yet. Run npm run build first.');
     }
 });
 

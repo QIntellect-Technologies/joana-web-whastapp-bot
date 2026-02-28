@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:public && npm run build:admin",
+    "build:public": "cd public-menu && npm install && npm run build",
+    "build:admin": "vite build",
+    "start": "node server/server.js",
     "preview": "vite preview"
   },
   "dependencies": {
