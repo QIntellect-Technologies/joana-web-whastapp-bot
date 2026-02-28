@@ -318,14 +318,23 @@ app.post('/api/send-receipt', async (req, res) => {
         // Schedule feedback message (1 minute later)
         setTimeout(async () => {
             try {
-                const feedbackText = `Hi ${name}! We hope you enjoyed your meal. 😊\n\nWhich item did you like the most? We value your feedback! 🍔🍟`;
+                const feedbackText = `Hi ${name}! We hope you enjoyed your meal. 😊\n\nHow was your experience with JOANA today?`;
                 await axios.post(url, {
                     messaging_product: 'whatsapp',
                     to: phone,
-                    type: 'text',
-                    text: { body: feedbackText }
+                    type: 'interactive',
+                    interactive: {
+                        type: 'button',
+                        body: { text: feedbackText },
+                        action: {
+                            buttons: [
+                                { type: 'reply', reply: { id: 'feedback_satisfied', title: 'Satisfied 😊' } },
+                                { type: 'reply', reply: { id: 'feedback_unsatisfied', title: 'Not Satisfied 😞' } }
+                            ]
+                        }
+                    }
                 }, { headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } });
-                console.log(`✅ Feedback message sent to ${phone}`);
+                console.log(`✅ Interactive feedback sent to ${phone}`);
             } catch (err) {
                 console.error('❌ Delayed feedback failed:', err.message);
             }

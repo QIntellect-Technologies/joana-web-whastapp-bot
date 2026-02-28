@@ -37,6 +37,15 @@ async function processMessage(from, text, name = 'Valued Customer') {
     };
 
     // 2. Handle Interactive Button IDs directly (Fast-path)
+    if (lowerText === 'feedback_satisfied') {
+        session.step = 'FEEDBACK_POSITIVE';
+        return ["We're so glad you're happy! 😊 Which item did you like the most? We value your feedback! 🍔🍟"];
+    }
+    if (lowerText === 'feedback_unsatisfied') {
+        session.step = 'FEEDBACK_NEGATIVE';
+        return ["We're sorry to hear that. 😞 Which item did you not like? Please let us know so we can improve."];
+    }
+
     if (lowerText === 'branch_1') {
         return [
             `📍 *Downtown Riyadh*\nGreat choice, ${name}! You can view the menu and order here:\n${getLink('550e8400-e29b-41d4-a716-446655440001')}`,
@@ -68,14 +77,20 @@ async function processMessage(from, text, name = 'Valued Customer') {
                     role: "system",
                     content: `You are JOANA, a polite and professional AI assistant for JOANA restaurant. 
                     - Customer Name: ${name} (Address them by name if they greet you).
+                    - Current Context: ${session.step} (Use this to understand if the user is giving feedback).
                     - Your task is to greet customers and guide them to order.
                     - IMPORTANT: Do NOT give manual ordering instructions like "Visit our website" or "Select from a dropdown". 
                     - ALWAYS tell the user to "Simply select your branch below to start your order instantly."
-                    - IF A USER PROVIDES FEEDBACK (e.g. "it was good", "Keto burger"): Acknowledge it warmly! Say something like "I'm so glad you enjoyed our Keto burger! It's one of our favorites too. 🍔"
+                    
+                    - FEEDBACK HANDLING:
+                      - IF Context is 'FEEDBACK_POSITIVE': The user just said they are satisfied. They are likely naming an item they liked. Acknowledge it with a very warm "Thank you! I'm so glad you enjoyed the [Item]! We'll let our chefs know! 🍔🌟". Follow with "See you soon at JOANA!".
+                      - IF Context is 'FEEDBACK_NEGATIVE': The user is unsatisfied. They are naming an item they didn't like. Be extremely polite and apologetic: "We're truly sorry the [Item] wasn't to your liking. We value this feedback and will work hard to improve it! 🙏".
+                    
+                    - SPECIAL RESPONSES:
+                      - If user says "Welcome" or "You're welcome", respond with "Have a wonderful day! 😊" and do NOT suggest ordering.
+                    
                     - STRICT RESTRICTION: Do not answer questions about recipes, medical advice, emergencies, or non-restaurant topics. 
-                    - If asked about non-restaurant things, politely say you can only help with orders and food at JOANA.
-                    - Keep responses friendly, warm, and very concise. 
-                    - If the user says they are hungry or want to order, tell them they can select a branch below to see the menu.`
+                    - Keep responses friendly, warm, and very concise.`
                 },
                 { role: "user", content: text }
             ],
@@ -86,8 +101,14 @@ async function processMessage(from, text, name = 'Valued Customer') {
 
         const aiResponse = response.data.choices[0].message.content;
 
-        // Determine if we should show branch buttons (for greetings or ordering intent)
-        const showButtons = /hi|hello|hey|order|hungry|food|branch|start|menu|listen|excuse|how/i.test(text + " " + aiResponse);
+        // Reset feedback step after processing if we were in a feedback state
+        if (session.step === 'FEEDBACK_POSITIVE' || session.step === 'FEEDBACK_NEGATIVE') {
+            session.step = 'welcome';
+        }
+
+        // Determine if we should show branch buttons
+        const isWelcome = /welcome/i.test(lowerText);
+        const showButtons = !isWelcome && /hi|hello|hey|order|hungry|food|branch|start|menu|listen|excuse|how/i.test(text + " " + aiResponse);
 
         if (showButtons) {
             return [
