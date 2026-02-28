@@ -62,7 +62,7 @@ async function processMessage(from, text, name = 'Valued Customer') {
         if (!apiKey) throw new Error("Missing GROQ_API_KEY in environment");
 
         const response = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
-            model: "llama3-8b-8192",
+            model: "llama-3.1-8b-instant",
             messages: [
                 {
                     role: "system",
@@ -105,7 +105,11 @@ async function processMessage(from, text, name = 'Valued Customer') {
         return [aiResponse];
 
     } catch (error) {
-        console.error("❌ Groq AI Error:", error.message);
+        if (error.response) {
+            console.error("❌ Groq AI Error Details:", JSON.stringify(error.response.data, null, 2));
+        } else {
+            console.error("❌ Groq AI Error:", error.message);
+        }
         // Fallback to simple matching if AI fails
         return [
             `👋 Welcome to JOANA, ${name}! 🍔\nExperience the future of dining with our AI-curated menu of premium culinary delights.`,
