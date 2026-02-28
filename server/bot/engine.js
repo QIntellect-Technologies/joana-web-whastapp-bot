@@ -28,9 +28,10 @@ async function processMessage(from, text) {
     if (/^(hi|hello|hey|hola|start|مرحبا|سلام)$/i.test(lowerText)) {
         session.step = 'welcome';
         return [
+            "👋 Welcome to JOANA! 🍔\nExperience the future of dining with our AI-curated menu of premium culinary delights.",
             {
                 type: 'button',
-                body: "👋 Welcome to JOANA Fast Food! 🍔\n\nExperience the future of dining. Please select a branch to explore our AI-curated menu and place your order directly from our website.",
+                body: "Please select a branch to explore our menu and order directly from our website:",
                 buttons: [
                     { id: 'branch_1', title: 'Downtown Riyadh' },
                     { id: 'branch_2', title: 'Jeddah Corniche' },

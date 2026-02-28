@@ -235,9 +235,16 @@ app.post('/webhook', async (req, res) => {
                             }
                         }
                     );
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 800));
                 } catch (error) {
-                    console.error('Error sending WhatsApp reply:', error.response ? error.response.data : error.message);
+                    const errorDetails = error.response ? JSON.stringify(error.response.data) : error.message;
+                    console.error('❌ Error sending WhatsApp reply!');
+                    console.error('👉 Target URL:', url.replace(process.env.WHATSAPP_TOKEN, '***'));
+                    console.error('👉 Error Details:', errorDetails);
+
+                    if (errorDetails.includes('Object with ID') && errorDetails.includes('does not exist')) {
+                        console.error('🎯 ACTION REQUIRED: Your WHATSAPP_PHONE_NUMBER_ID looks incorrect. Please verify it in Meta Dashboard.');
+                    }
                 }
             }
         }
