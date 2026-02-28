@@ -5,6 +5,9 @@
     },
     "deploy": {
         "startCommand": "npm start",
-        "restartPolicyType": "ON_FAILURE"
+        "restartPolicyType": "ON_FAILURE",
+        "env": {
+            "NIXPACKS_NODE_VERSION": "22.14.0"
+        }
     }
 }
