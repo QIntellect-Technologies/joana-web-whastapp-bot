@@ -15,14 +15,6 @@ const ChefAnimation: React.FC<ChefAnimationProps> = ({ branchName }) => {
 
     const CHEF_AVATAR_URL = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/People%20with%20professions/Man%20Cook%20Medium-Light%20Skin%20Tone.png";
 
-    // Food items to revolve
-    const FOOD_ITEMS = [
-        { icon: "🍔", label: "Burger", delay: 0 },
-        { icon: "🍕", label: "Pizza", delay: 2 }, // Halfway if 2 items, or distribute
-        { icon: "🍟", label: "Fries", delay: 4 },
-        { icon: "🥤", label: "Drink", delay: 6 },
-    ];
-
     return (
         <div className="relative w-80 h-80 flex items-center justify-center">
             {/* 1. Background Glow */}

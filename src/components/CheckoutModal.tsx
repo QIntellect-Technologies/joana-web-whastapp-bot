@@ -14,10 +14,9 @@ interface CheckoutModalProps {
     calculatePoints?: (amount: number) => number;
     getCustomerPoints?: (phone: string) => Promise<{ loyalty_points: number; loyalty_tier: string }>;
     calculateApplicableDiscounts?: (total: number) => { type: string; value: number; name: string } | null;
-    calculateRedemption?: (points: number, total: number) => { discountAmount: number; pointsCost: number; ruleId: string | null };
 }
 
-const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSubmit, totalAmount, branchId, calculatePoints, getCustomerPoints, calculateApplicableDiscounts, calculateRedemption }) => {
+const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSubmit, totalAmount, branchId, calculatePoints, getCustomerPoints, calculateApplicableDiscounts }) => {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [notes, setNotes] = useState('');

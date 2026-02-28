@@ -43,7 +43,7 @@ const App: React.FC = () => {
   const branchIdParam = searchParams.get('branch_id');
 
   const { branch, categories, items, reviewStats, loading } = usePublicMenu(branchIdParam || undefined);
-  const { calculatePotentialPoints, getCustomerPoints, calculateRedemption, calculateApplicableDiscounts, activeDeals, loading: loyaltyLoading } = useLoyalty(branch?.id);
+  const { calculatePotentialPoints, getCustomerPoints, calculateApplicableDiscounts, activeDeals, loading: loyaltyLoading } = useLoyalty(branch?.id);
 
 
   const [activeCategoryId, setActiveCategoryId] = useState('all');
