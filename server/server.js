@@ -242,7 +242,10 @@ app.post('/webhook', async (req, res) => {
                                 text: { body: reply }
                             };
                         }
-                        await axios.post(
+                        console.log(`📤 Sending message to ${from}...`);
+                        console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+
+                        const response = await axios.post(
                             url,
                             payload,
                             {
@@ -252,6 +255,7 @@ app.post('/webhook', async (req, res) => {
                                 }
                             }
                         );
+                        console.log(`✅ Message accepted by Meta! Message ID: ${response.data.messages[0].id}`);
                         await new Promise(resolve => setTimeout(resolve, 800));
                     } catch (error) {
                         const errorDetails = error.response ? JSON.stringify(error.response.data) : error.message;
