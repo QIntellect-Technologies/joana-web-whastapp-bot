@@ -12,7 +12,7 @@ import ReviewSidebar from './components/ReviewSidebar';
 import { useOrder } from './hooks/useOrder'; // NEW
 import { useLoyalty } from './hooks/useLoyalty'; // NEW
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { Search, UtensilsCrossed, Menu, History, Star } from 'lucide-react'; // Added Star icon
+import { Search, UtensilsCrossed, ShoppingBag, History, Star } from 'lucide-react'; // Added Star icon
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -53,7 +53,7 @@ const App: React.FC = () => {
     const subtotal = cart.reduce((sum, i) => sum + (i.discounted_price || i.price) * i.quantity, 0);
     return subtotal > 0 ? subtotal + 15 : 0; // 15 SAR delivery fee
   }, [cart]);
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false); // NEW
   const [isTrackerOpen, setTrackerOpen] = useState(false); // NEW
   const [isReviewsOpen, setReviewsOpen] = useState(false);
@@ -252,9 +252,14 @@ const App: React.FC = () => {
             </button>
             <button
               onClick={() => setSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-xl bg-white/50 hover:bg-white text-slate-800 transition-all border border-transparent hover:border-slate-200"
+              className="p-2 rounded-xl bg-white/50 hover:bg-white text-slate-800 transition-all border border-transparent hover:border-slate-200 relative group"
             >
-              <Menu className="w-6 h-6" />
+              <ShoppingBag className="w-6 h-6 group-hover:text-primary transition-colors" />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-in zoom-in duration-300">
+                  {cart.length}
+                </span>
+              )}
             </button>
           </div>
         </header>
@@ -335,6 +340,7 @@ const App: React.FC = () => {
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
         onCheckout={() => setCheckoutOpen(true)}
+        onClose={() => setSidebarOpen(false)}
       />
 
       {/* Checkout Modal */}
