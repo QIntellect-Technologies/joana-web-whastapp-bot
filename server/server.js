@@ -14,10 +14,12 @@ const app = express();
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'joana-verify-token-123';
+const WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'joana-verify-token-123';
 
 console.log('--- Server Startup ---');
 console.log('PORT:', PORT);
+console.log('WHATSAPP_ACCESS_TOKEN loaded:', WHATSAPP_ACCESS_TOKEN ? '✅ Yes' : '❌ No');
 console.log('VERIFY_TOKEN loaded:', VERIFY_TOKEN ? '✅ Yes' : '❌ No');
 console.log('----------------------');
 
@@ -187,8 +189,8 @@ app.post('/webhook', async (req, res) => {
             const replies = await botEngine.processMessage(from, msgBody);
 
             for (const reply of replies) {
+                const url = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
                 try {
-                    const url = `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
                     let payload;
                     if (reply && typeof reply === 'object' && reply.type === 'button') {
                         payload = {
@@ -230,7 +232,7 @@ app.post('/webhook', async (req, res) => {
                         payload,
                         {
                             headers: {
-                                'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`,
+                                'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
                                 'Content-Type': 'application/json'
                             }
                         }
@@ -239,7 +241,7 @@ app.post('/webhook', async (req, res) => {
                 } catch (error) {
                     const errorDetails = error.response ? JSON.stringify(error.response.data) : error.message;
                     console.error('❌ Error sending WhatsApp reply!');
-                    console.error('👉 Target URL:', url.replace(process.env.WHATSAPP_TOKEN, '***'));
+                    console.error('👉 Target URL:', url.replace(WHATSAPP_ACCESS_TOKEN, '***'));
                     console.error('👉 Error Details:', errorDetails);
 
                     if (errorDetails.includes('Object with ID') && errorDetails.includes('does not exist')) {
