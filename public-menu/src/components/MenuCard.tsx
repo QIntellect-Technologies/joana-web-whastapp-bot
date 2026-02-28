@@ -85,7 +85,7 @@ const MenuCard: React.FC<MenuCardProps & { onAdd: (item: PublicMenuItem) => void
 
                 <motion.button
                     whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         if (!isOutOfStock) onAdd(item);
                     }}

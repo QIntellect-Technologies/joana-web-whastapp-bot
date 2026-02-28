@@ -1,18 +1,18 @@
 {
   "name": "food-boot",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": ">=20.19.1"
+    "node": ">=22.12.0"
   },
+  "workspaces": [
+    "public-menu"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "npm run build:public && npm run build:admin",
-    "build:public": "npm install --prefix public-menu --include=optional && npm run build --prefix public-menu",
-    "build:admin": "vite build",
-    "start": "node server/server.js",
-    "preview": "vite preview"
+    "dev": "npm run dev --workspace=public-menu",
+    "build": "npm run build --workspaces && vite build",
+    "start": "node server/server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.91.1",
